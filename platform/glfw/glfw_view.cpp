@@ -27,7 +27,7 @@ GLFWView::GLFWView(bool fullscreen_, bool benchmark_)
     : fullscreen(fullscreen_), benchmark(benchmark_) {
     glfwSetErrorCallback(glfwError);
 
-    std::srand(std::time(nullptr));
+    std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
     if (!glfwInit()) {
         mbgl::Log::Error(mbgl::Event::OpenGL, "failed to initialize glfw");
@@ -550,7 +550,7 @@ void showDebugImage(std::string name, const char *data, size_t width, size_t hei
 
     static GLFWwindow *debugWindow = nullptr;
     if (!debugWindow) {
-        debugWindow = glfwCreateWindow(width, height, name.c_str(), nullptr, nullptr);
+        debugWindow = glfwCreateWindow(static_cast<int>(width), static_cast<int>(height), name.c_str(), nullptr, nullptr);
         if (!debugWindow) {
             glfwTerminate();
             fprintf(stderr, "Failed to initialize window\n");
@@ -560,7 +560,7 @@ void showDebugImage(std::string name, const char *data, size_t width, size_t hei
 
     GLFWwindow *currentWindow = glfwGetCurrentContext();
 
-    glfwSetWindowSize(debugWindow, width, height);
+    glfwSetWindowSize(debugWindow, static_cast<int>(width), static_cast<int>(height));
     glfwMakeContextCurrent(debugWindow);
 
     int fbWidth, fbHeight;
@@ -573,7 +573,7 @@ void showDebugImage(std::string name, const char *data, size_t width, size_t hei
 
         MBGL_CHECK_ERROR(glPixelZoom(scale, -scale));
         MBGL_CHECK_ERROR(glRasterPos2f(-1.0f, 1.0f));
-        MBGL_CHECK_ERROR(glDrawPixels(width, height, GL_LUMINANCE, GL_UNSIGNED_BYTE, data));
+        MBGL_CHECK_ERROR(glDrawPixels(static_cast<int>(width), static_cast<int>(height), GL_LUMINANCE, GL_UNSIGNED_BYTE, data));
     }
 
     glfwSwapBuffers(debugWindow);
@@ -586,7 +586,7 @@ void showColorDebugImage(std::string name, const char *data, size_t logicalWidth
 
     static GLFWwindow *debugWindow = nullptr;
     if (!debugWindow) {
-        debugWindow = glfwCreateWindow(logicalWidth, logicalHeight, name.c_str(), nullptr, nullptr);
+        debugWindow = glfwCreateWindow(static_cast<int>(logicalWidth), static_cast<int>(logicalHeight), name.c_str(), nullptr, nullptr);
         if (!debugWindow) {
             glfwTerminate();
             fprintf(stderr, "Failed to initialize window\n");
@@ -596,7 +596,7 @@ void showColorDebugImage(std::string name, const char *data, size_t logicalWidth
 
     GLFWwindow *currentWindow = glfwGetCurrentContext();
 
-    glfwSetWindowSize(debugWindow, logicalWidth, logicalHeight);
+    glfwSetWindowSize(debugWindow, static_cast<int>(logicalWidth), static_cast<int>(logicalHeight));
     glfwMakeContextCurrent(debugWindow);
 
     int fbWidth, fbHeight;
@@ -617,7 +617,7 @@ void showColorDebugImage(std::string name, const char *data, size_t logicalWidth
         MBGL_CHECK_ERROR(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
         MBGL_CHECK_ERROR(glPixelZoom(xScale, -yScale));
         MBGL_CHECK_ERROR(glRasterPos2f(-1.0f, 1.0f));
-        MBGL_CHECK_ERROR(glDrawPixels(width, height, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8_REV, data));
+        MBGL_CHECK_ERROR(glDrawPixels(static_cast<int>(width), static_cast<int>(height), GL_RGBA, GL_UNSIGNED_INT_8_8_8_8_REV, data));
     }
 
     glfwSwapBuffers(debugWindow);
