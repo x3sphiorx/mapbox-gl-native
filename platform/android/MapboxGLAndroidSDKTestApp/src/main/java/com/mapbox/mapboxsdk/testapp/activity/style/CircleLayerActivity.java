@@ -10,6 +10,7 @@ import android.view.View;
 
 import com.mapbox.mapboxsdk.camera.CameraPosition;
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory;
+import com.mapbox.mapboxsdk.constants.Style;
 import com.mapbox.mapboxsdk.geometry.LatLng;
 import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
@@ -34,18 +35,19 @@ import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.circleRadius;
  * Uses bus stop data from Singapore as a source and allows to filter into 1 specific route with a line layer.
  * </p>
  */
-public class CircleLayerActivity extends AppCompatActivity {
-
-  private static final String[] STOPS_FOR_ROUTE = new String[] {"99009", "99131", "99049", "99039", "99029", "99019",
-    "98079", "98069", "97099", "97089", "97079", "97069", "97209", "97059", "97049", "97039", "97019", "96069",
-    "96059", "96049", "96099", "96089", "96079", "85079", "85089", "85069", "85059", "85099", "84069", "84059",
-    "84049", "84039", "84029", "84019", "83099", "83079", "83059", "83049", "83029", "82069", "82049", "82029",
-    "82109", "81069", "81049", "81029", "80089", "80069", "80049", "80039", "80029", "01319", "01219", "01129",
-    "01059", "01119", "01019", "04159", "04149", "04229", "04239", "05059", "05049", "05039", "05019", "10589"};
+public class CircleLayerActivity extends AppCompatActivity implements View.OnClickListener {
 
   private MapView mapView;
   private MapboxMap mapboxMap;
+
+  private FloatingActionButton styleFab;
+  private FloatingActionButton routeFab;
+
   private CircleLayer layer;
+  private GeoJsonSource source;
+
+  private int currentStyleIndex = 0;
+  private boolean isLoadinStyle;
 
   @Override
   public void onCreate(Bundle savedInstanceState) {
@@ -58,54 +60,97 @@ public class CircleLayerActivity extends AppCompatActivity {
       @Override
       public void onMapReady(@NonNull final MapboxMap map) {
         mapboxMap = map;
+
+        // add source
         try {
-          mapboxMap.addSource(new GeoJsonSource("bus_stop",
-            new URL("https://raw.githubusercontent.com/cheeaun/busrouter-sg/master/data/2/bus-stops.geojson")));
+          source = new GeoJsonSource("bus_stop",
+            new URL("https://raw.githubusercontent.com/cheeaun/busrouter-sg/master/data/2/bus-stops.geojson"));
+        } catch (MalformedURLException exception) {
+          Timber.e("That's not an url... ", exception);
+        }
+        mapboxMap.addSource(source);
+
+        // add layer
+        layer = new CircleLayer("stops_layer", "bus_stop");
+        layer.setProperties(
+          circleColor(Color.parseColor("#FF9800")),
+          circleRadius(2.0f)
+        );
+        mapboxMap.addLayer(layer);
+
+        // init FAB's
+        routeFab = (FloatingActionButton) findViewById(R.id.fab_route);
+        routeFab.setColorFilter(ContextCompat.getColor(CircleLayerActivity.this, R.color.primary));
+        routeFab.setOnClickListener(CircleLayerActivity.this);
+
+        styleFab = (FloatingActionButton) findViewById(R.id.fab_style);
+        styleFab.setOnClickListener(CircleLayerActivity.this);
+      }
+    });
+  }
+
+  @Override
+  public void onClick(View view) {
+    if (!isLoadinStyle) {
+      if (view.getId() == R.id.fab_route) {
+        // remove buttons
+        routeFab.setVisibility(View.GONE);
+        styleFab.setVisibility(View.GONE);
+
+        // apply filter
+        layer.setFilter(in("number", (Object[]) Data.STOPS_FOR_ROUTE));
+
+        // add a source for bus route
+        try {
+
+          mapboxMap.addSource(new GeoJsonSource("bus_route",
+            new URL("https://gist.githubusercontent.com/tobrun/7fbc0fe7e9ffea509f7608cda2601d5d/raw/"
+              + "a4b8cc289020f91fa2e1553524820054395e36f5/line.geojson")));
         } catch (MalformedURLException malformedUrlException) {
           Timber.e("That's not an url... ", malformedUrlException);
         }
 
-        layer = new CircleLayer("stops_layer", "bus_stop");
-        layer.setProperties(
-          circleColor(Color.parseColor("#FF9800")),
-          circleRadius(1.0f)
-        );
+        // add a line layer for bus route
+        LineLayer lineLayer = new LineLayer("route_layer", "bus_route");
+        mapboxMap.addLayerBelow(lineLayer, "stops_layer");
+        mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(
+          new CameraPosition.Builder()
+            .target(new LatLng(1.3896777, 103.9874997))
+            .bearing(225)
+            .tilt(45)
+            .zoom(13)
+            .build()
+        ), 1750);
 
-        mapboxMap.addLayer(layer);
+      } else if (view.getId() == R.id.fab_style) {
+        isLoadinStyle = true;
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setColorFilter(ContextCompat.getColor(CircleLayerActivity.this, R.color.primary));
-        fab.setOnClickListener(new View.OnClickListener() {
+        // remove layer/source
+        mapboxMap.removeLayer(layer);
+        mapboxMap.removeSource(source);
+
+        // listen to style loaded events
+        mapView.addOnMapChangedListener(new MapView.OnMapChangedListener() {
           @Override
-          public void onClick(View view) {
-
-            // filter out stops for our route
-            layer.setFilter(in("number", (Object[]) STOPS_FOR_ROUTE));
-
-            // add route as a line
-            try {
-              mapboxMap.addSource(new GeoJsonSource("bus_route",
-                new URL("https://gist.githubusercontent.com/tobrun/7fbc0fe7e9ffea509f7608cda2601d5d/raw/"
-                  + "a4b8cc289020f91fa2e1553524820054395e36f5/line.geojson")));
-            } catch (MalformedURLException malformedUrlException) {
-              Timber.e("That's not an url... ", malformedUrlException);
+          public void onMapChanged(@MapView.MapChange int change) {
+            if (change == MapView.DID_FINISH_LOADING_STYLE) {
+              // re-add layer/source
+              mapboxMap.addLayer(layer);
+              mapboxMap.addSource(source);
+              mapView.removeOnMapChangedListener(this);
+              isLoadinStyle = false;
             }
-            LineLayer lineLayer = new LineLayer("route_layer", "bus_route");
-            mapboxMap.addLayerBelow(lineLayer, "stops_layer");
-
-            // move camera to start route
-            mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(
-              new CameraPosition.Builder()
-                .target(new LatLng(1.3896777, 103.9874997))
-                .bearing(225)
-                .tilt(45)
-                .zoom(13)
-                .build()
-            ), 1750);
           }
         });
+
+        // toggle to next style
+        currentStyleIndex++;
+        if (currentStyleIndex == Data.STYLES.length) {
+          currentStyleIndex = 0;
+        }
+        mapboxMap.setStyleUrl(Data.STYLES[currentStyleIndex]);
       }
-    });
+    }
   }
 
   @Override
@@ -148,5 +193,23 @@ public class CircleLayerActivity extends AppCompatActivity {
   public void onDestroy() {
     super.onDestroy();
     mapView.onDestroy();
+  }
+
+  private static class Data {
+    private static final String[] STOPS_FOR_ROUTE = new String[] {"99009", "99131", "99049", "99039", "99029", "99019",
+      "98079", "98069", "97099", "97089", "97079", "97069", "97209", "97059", "97049", "97039", "97019", "96069",
+      "96059", "96049", "96099", "96089", "96079", "85079", "85089", "85069", "85059", "85099", "84069", "84059",
+      "84049", "84039", "84029", "84019", "83099", "83079", "83059", "83049", "83029", "82069", "82049", "82029",
+      "82109", "81069", "81049", "81029", "80089", "80069", "80049", "80039", "80029", "01319", "01219", "01129",
+      "01059", "01119", "01019", "04159", "04149", "04229", "04239", "05059", "05049", "05039", "05019", "10589"};
+
+    private static final String[] STYLES = new String[] {
+      Style.MAPBOX_STREETS,
+      Style.OUTDOORS,
+      Style.LIGHT,
+      Style.DARK,
+      Style.SATELLITE,
+      Style.SATELLITE_STREETS
+    };
   }
 }
