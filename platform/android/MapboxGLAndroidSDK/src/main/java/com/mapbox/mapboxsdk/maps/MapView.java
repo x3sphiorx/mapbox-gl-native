@@ -17,6 +17,7 @@ import android.support.annotation.IntDef;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.UiThread;
+import android.support.v4.util.LongSparseArray;
 import android.support.v7.app.AlertDialog;
 import android.util.AttributeSet;
 import android.view.KeyEvent;
@@ -34,6 +35,7 @@ import android.widget.ImageView;
 
 import com.mapbox.mapboxsdk.Mapbox;
 import com.mapbox.mapboxsdk.R;
+import com.mapbox.mapboxsdk.annotations.Annotation;
 import com.mapbox.mapboxsdk.annotations.MarkerViewManager;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
 import com.mapbox.mapboxsdk.constants.MapboxConstants;
@@ -122,7 +124,7 @@ public class MapView extends FrameLayout {
     setContentDescription(context.getString(R.string.mapbox_mapActionDescription));
 
     // create native Map object
-    nativeMapView = new NativeMapView(this, new NativeLibrary());
+    nativeMapView = new NativeMapView(this);
 
     // callback for focal point invalidation
     FocalPointInvalidator focalPoint = new FocalPointInvalidator(compassView);
@@ -140,7 +142,10 @@ public class MapView extends FrameLayout {
     MyLocationViewSettings myLocationViewSettings = new MyLocationViewSettings(myLocationView, proj, focalPoint);
     MarkerViewManager markerViewManager = new MarkerViewManager((ViewGroup) findViewById(R.id.markerViewContainer));
     IconManager iconManager = new IconManager(nativeMapView);
-    AnnotationManager annotations = new AnnotationManager(nativeMapView, this, markerViewManager, iconManager);
+    LongSparseArray<Annotation> annotationsArray = new LongSparseArray<>();
+    Annotations annotationsFunctionalities = new AnnotationsFunctions(nativeMapView, annotationsArray);
+    AnnotationManager annotations = new AnnotationManager(nativeMapView, this, markerViewManager, iconManager,
+      annotationsFunctionalities, annotationsArray);
     Transform transform = new Transform(nativeMapView, annotations.getMarkerViewManager(), trackingSettings);
     mapboxMap = new MapboxMap(nativeMapView, transform, uiSettings, trackingSettings, myLocationViewSettings, proj,
       registerTouchListener, annotations);
