@@ -1,7 +1,9 @@
 #pragma once
 
+#include <mbgl/util/logging.hpp>
 #include <mbgl/util/noncopyable.hpp>
 
+#include <cassert>
 #include <stdexcept>
 
 #include <pthread.h>
@@ -23,13 +25,15 @@ public:
         });
 
         if (ret) {
-            throw std::runtime_error("Failed to init local storage key.");
+            Log::Error(Event::General, "Failed to init local storage key.");
+            assert(false);
         }
     }
 
     ~ThreadLocal() {
         if (pthread_key_delete(key)) {
-            throw std::runtime_error("Failed to delete local storage key.");
+            Log::Error(Event::General, "Failed to delete local storage key.");
+            assert(false);
         }
     }
 

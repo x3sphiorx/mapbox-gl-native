@@ -18,9 +18,8 @@ public:
     {
         const int error = sqlite3_open_v2(filename, &db, flags, nullptr);
         if (error != SQLITE_OK) {
-            const auto message = sqlite3_errmsg(db);
             db = nullptr;
-            throw Exception { error, message };
+            mbgl::Log::Error(mbgl::Event::Database, "%s (Code %i)", sqlite3_errmsg(db), error);
         }
     }
 
@@ -30,7 +29,7 @@ public:
 
         const int error = sqlite3_close(db);
         if (error != SQLITE_OK) {
-            throw Exception { error, sqlite3_errmsg(db) };
+            mbgl::Log::Error(mbgl::Event::Database, "%s (Code %i)", sqlite3_errmsg(db), error);
         }
     }
 
@@ -44,7 +43,7 @@ public:
         const int error = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
         if (error != SQLITE_OK) {
             stmt = nullptr;
-            throw Exception { error, sqlite3_errmsg(db) };
+            mbgl::Log::Error(mbgl::Event::Database, "%s (Code %i)", sqlite3_errmsg(db), error);
         }
     }
 
