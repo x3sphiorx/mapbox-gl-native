@@ -1158,7 +1158,7 @@
 #endif
         ];
         layer.textOffset = constantStyleValue;
-        mbgl::style::PropertyValue<std::array<float, 2>> propertyValue = { { 1, 1 } };
+        mbgl::style::DataDrivenPropertyValue<std::array<float, 2>> propertyValue = { { 1, 1 } };
         XCTAssertEqual(rawLayer->getTextOffset(), propertyValue,
                        @"Setting textOffset to a constant value should update text-offset.");
         XCTAssertEqualObjects(layer.textOffset, constantStyleValue,
